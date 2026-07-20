@@ -17,17 +17,54 @@ Replace this paragraph with your own summary of what your version does.
 
 ## How The System Works
 
-Explain your design in plain language.
+Real-world recommenders usually combine a few strong signals instead of relying on one feature alone. In this simulation, I will prioritize a simple content-based approach that gives the most weight to how closely a song matches the user's preferred genre, mood, and target energy, then use the remaining audio features to fine-tune the final score. Songs that are closer to the user's taste profile should score higher, and the top-scoring songs will be recommended first.
 
-Some prompts to answer:
+My plan is:
 
-- What features does each `Song` use in your system
-  - For example: genre, mood, energy, tempo
-- What information does your `UserProfile` store
-- How does your `Recommender` compute a score for each song
-- How do you choose which songs to recommend
+1. Read the user's taste profile from the input data.
+2. Loop through every song in the CSV and judge it one by one.
+3. Assign points for genre, mood, energy similarity, acousticness, and smaller tie-breakers.
+4. Sort the songs by total score.
+5. Return the top `k` recommendations.
 
-You can include a simple diagram or bullet list if helpful.
+The simulation will use these features:
+
+- `Song`: `id`, `title`, `artist`, `genre`, `mood`, `energy`, `tempo_bpm`, `valence`, `danceability`, `acousticness`
+- `UserProfile`: `favorite_genre`, `favorite_mood`, `target_energy`, `likes_acoustic`
+
+The recommender will compare songs against a taste profile like this:
+
+```python
+taste_profile = {
+   "favorite_genre": "rock",
+   "favorite_mood": "intense",
+   "target_energy": 0.88,
+   "likes_acoustic": False,
+}
+```
+
+Prompt for critique: Does this user profile give the recommender enough information to tell the difference between "intense rock" and "chill lofi," or is it too narrow to handle more than one listening style? How should the point weights be balanced so a mood match matters relative to a genre match, and what would you change to make it more flexible without losing specificity?
+
+### Algorithm Recipe
+
+My program will score each song with a simple rule-based content match, then sort all songs from highest score to lowest score. The main rules are:
+
+```mermaid
+flowchart LR
+   A[Input: User Prefs] --> B[Process: Loop through every song in the CSV and score it]
+   B --> C[Output: Rank all songs and return the Top K Recommendations]
+```
+
+- Give `+2.0` points when the song's `genre` matches the user's favorite genre.
+- Give `+1.0` point when the song's `mood` matches the user's favorite mood.
+- Add similarity points based on how close the song's `energy` is to the user's target energy.
+- Add a small bonus or penalty for `acousticness` depending on whether the user likes acoustic songs.
+- Use `tempo_bpm`, `valence`, and `danceability` as smaller tie-breakers so songs with similar genre and mood can still be ordered more carefully.
+- Return the top `k` songs after sorting by score.
+
+In short, the recipe is: score one song by comparing it to the user's preferences, then rank all songs by that score and recommend the best matches first.
+
+Potential bias: this system might over-prioritize genre and mood matches, so it could miss great songs that fit the user's energy or overall vibe but do not match the favorite genre exactly.
 
 ---
 
@@ -68,15 +105,59 @@ You can add more tests in `tests/test_recommender.py`.
 
 ## Sample Recommendation Output
 
-Paste a sample of your recommender's output here as a text block so a reader can see what it produces:
+```text
+Loading songs from data/songs.csv...
 
-```
-# e.g.:
-# User profile: genre=indie, mood=chill, energy=low
-# Recommendations:
-#   1. ...
-#   2. ...
-#   3. ...
+Top recommendations:
+
+1. Sunrise City
+   Final score: 5.92
+   Reasons:
+   - genre match (+2.0)
+   - mood match (+1.0)
+   - energy closeness (+1.96)
+   - non-acoustic preference (+0.41)
+   - tempo closeness (+0.25)
+   - valence closeness (+0.15)
+   - danceability closeness (+0.15)
+
+2. Gym Hero
+   Final score: 4.77
+   Reasons:
+   - genre match (+2.0)
+   - energy closeness (+1.74)
+   - non-acoustic preference (+0.47)
+   - tempo closeness (+0.25)
+   - valence closeness (+0.15)
+   - danceability closeness (+0.15)
+
+3. Rooftop Lights
+   Final score: 3.79
+   Reasons:
+   - mood match (+1.0)
+   - energy closeness (+1.92)
+   - non-acoustic preference (+0.33)
+   - tempo closeness (+0.25)
+   - valence closeness (+0.15)
+   - danceability closeness (+0.15)
+
+4. Night Drive Loop
+   Final score: 2.84
+   Reasons:
+   - energy closeness (+1.90)
+   - non-acoustic preference (+0.39)
+   - tempo closeness (+0.25)
+   - valence closeness (+0.15)
+   - danceability closeness (+0.15)
+
+5. Storm Runner
+   Final score: 2.78
+   Reasons:
+   - energy closeness (+1.78)
+   - non-acoustic preference (+0.45)
+   - tempo closeness (+0.25)
+   - valence closeness (+0.15)
+   - danceability closeness (+0.15)
 ```
 
 **Screenshot or video** *(optional)*: <!-- Insert a screenshot or demo video link here -->
